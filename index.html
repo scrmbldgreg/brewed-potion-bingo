@@ -45,7 +45,7 @@
     .text-brand-primary { color: var(--potion-purple); }
     .text-brand-secondary { color: var(--magic-pink); }
     
-    /* Panel Styles - Clean White */
+    /* Panel Styles */
     .clean-panel {
         background-color: white;
         border: 1px solid #e2e8f0;
@@ -61,7 +61,7 @@
         border-color: #cbd5e1;
     }
     
-    /* Marked Cell - NOW PURPLE instead of Green */
+    /* Marked Cell */
     .marked { 
         position: relative; 
         background-color: var(--potion-purple) !important; 
@@ -70,7 +70,7 @@
     }
     .marked::after { content: '✖'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.5); font-size: 1.2rem; }
     
-    /* Winning Cell - Soft Gold */
+    /* Winning Cell */
     .winning-cell { position: relative; background-color: #fef9c3 !important; color: #854d0e !important; border-color: #facc15 !important; }
     
     .no-scrollbar::-webkit-scrollbar { width: 0px; }
@@ -208,7 +208,7 @@
               End Game
             </button>
           </div>
-          <h3 class="font-bold text-slate-400 text-xs uppercase mb-2 tracking-widest border-t border-slate-100 pt-2">Players</h3>
+          <h3 class="font-bold text-slate-400 text-xs uppercase mb-2 tracking-widest border-t border-slate-100 pt-2">Leaderboard</h3>
           <ul id="gamePlayerList" class="space-y-1 max-h-48 overflow-y-auto pr-2"></ul>
           <div id="jackpotStatus" class="mt-4 text-center p-2 bg-brand-secondary text-white rounded-lg text-xs font-bold hidden animate-bounce shadow-md">BLACKOUT MODE</div>
         </div>
@@ -403,38 +403,70 @@ function setupLobby() {
 
     const players = data.players || [];
     const lobbyList = document.getElementById('playerList');
-    if (lobbyList) {
-        lobbyList.innerHTML = players.map(p => {
-          const isHostUser = (p === data.host);
-          const isMe = (p === myName);
-          const kickBtn = (isHost && !isMe) ? 
-            `<button onclick="kickPlayer('${p}')" class="ml-2 text-pink-600 font-bold text-[8px] uppercase border border-pink-200 px-2 py-1 rounded-md hover:bg-pink-50">Kick</button>` : '';
-          const leaveBtn = (isMe && !isHost) ? 
-            `<button onclick="leaveRoom()" class="ml-2 text-slate-400 font-bold text-[8px] uppercase border border-slate-200 px-2 py-1 rounded-md hover:bg-slate-50">Leave</button>` : '';
-          return `<li class="p-2 bg-white rounded-lg border border-slate-200 flex justify-between items-center text-xs shadow-sm animate-fade-in"><span class="font-bold text-slate-700">${p}</span><div class="flex items-center gap-1">${isHostUser ? '<span class="text-[7px] bg-purple-600 text-white px-2 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${kickBtn} ${leaveBtn}</div></li>`;
-        }).join('');
+    
+    if (data.gameState) {
+        gameStarted = data.gameState.gameStarted;
+        calledNumbers = data.gameState.calledNumbers || [];
+        isJackpotMode = data.gameState.isJackpotMode;
+        
+        let currentWinners = data.gameState.winners || [];
+        if (typeof currentWinners === 'string') currentWinners = [currentWinners];
+        else if (!Array.isArray(currentWinners)) currentWinners = Object.values(currentWinners);
+
+        currentWinners.forEach(w => {
+            if (!displayedWinners.has(w)) {
+                triggerWinnerPopup(w);
+                displayedWinners.add(w);
+            }
+        });
+
+        // Updated for Ranking System
+        updatePlayerUI(players, data.host, currentWinners);
+        render(data.gameState);
+    } else {
+        // Fallback if gameState isn't ready yet
+        updatePlayerUI(players, data.host, []);
     }
-    
-    if (!data.gameState) return;
-
-    gameStarted = data.gameState.gameStarted;
-    calledNumbers = data.gameState.calledNumbers || [];
-    isJackpotMode = data.gameState.isJackpotMode;
-    
-    let currentWinners = data.gameState.winners || [];
-    if (typeof currentWinners === 'string') currentWinners = [currentWinners];
-    else if (!Array.isArray(currentWinners)) currentWinners = Object.values(currentWinners);
-
-    currentWinners.forEach(w => {
-        if (!displayedWinners.has(w)) {
-            triggerWinnerPopup(w);
-            displayedWinners.add(w);
-        }
-    });
-
-    updatePlayerUI(players, data.host, currentWinners);
-    render(data.gameState);
   });
+}
+
+function getOrdinal(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function updatePlayerUI(players, hostName, winnerList) {
+  const gameList = document.getElementById('gamePlayerList');
+  if (!gameList) return;
+  gameList.innerHTML = players.map(p => {
+    const winnerIndex = winnerList.indexOf(p);
+    const isWinner = winnerIndex !== -1;
+    const isHostUser = (p === hostName);
+    const isMe = (p === myName);
+    
+    let actionBadge = '';
+    if (isHost && !isMe) {
+        actionBadge = `<button onclick="kickPlayer('${p}')" class="ml-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[8px] rounded-full px-2 py-0.5 border border-red-200 uppercase transition">Kick</button>`;
+    } else if (!isHost && isMe) {
+        actionBadge = `<button onclick="leaveRoom()" class="ml-1 bg-slate-50 hover:bg-slate-100 text-slate-400 font-bold text-[8px] rounded-full px-2 py-0.5 border border-slate-200 uppercase transition">Leave</button>`;
+    }
+
+    let rankBadge = '';
+    if (isWinner) {
+        const rank = winnerIndex + 1;
+        const ordinal = getOrdinal(rank);
+        let colorClass = "bg-slate-100 text-slate-500 border-slate-300"; // Default
+        
+        if (rank === 1) colorClass = "bg-yellow-100 text-yellow-700 border-yellow-400"; // Gold
+        else if (rank === 2) colorClass = "bg-slate-200 text-slate-600 border-slate-400"; // Silver
+        else if (rank === 3) colorClass = "bg-orange-100 text-orange-700 border-orange-300"; // Bronze
+        
+        rankBadge = `<span class="text-[8px] ${colorClass} px-1.5 py-0.5 rounded-full font-black uppercase ml-1 border shadow-sm">${ordinal}</span>`;
+    }
+
+    return `<li class="flex items-center justify-between p-2 rounded-lg border ${isWinner ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-slate-200'}"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full ${isWinner ? 'bg-yellow-500 animate-pulse' : 'bg-purple-500'}"></div><span class="text-xs font-bold ${isWinner ? 'text-yellow-700' : 'text-slate-700'}">${p}</span>${rankBadge}</div><div class="flex items-center">${isHostUser ? '<span class="text-[7px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${actionBadge}</div></li>`;
+  }).join('');
 }
 
 function enterGamePanel() {
@@ -590,25 +622,6 @@ function clearCardMarksUI() {
   });
 }
 
-function updatePlayerUI(players, hostName, winnerList) {
-  const gameList = document.getElementById('gamePlayerList');
-  if (!gameList) return;
-  gameList.innerHTML = players.map(p => {
-    const isWinner = winnerList.includes(p);
-    const isHostUser = (p === hostName);
-    const isMe = (p === myName);
-    
-    let actionBadge = '';
-    if (isHost && !isMe) {
-        actionBadge = `<button onclick="kickPlayer('${p}')" class="ml-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[8px] rounded-full px-2 py-0.5 border border-red-200 uppercase transition">Kick</button>`;
-    } else if (!isHost && isMe) {
-        actionBadge = `<button onclick="leaveRoom()" class="ml-1 bg-slate-50 hover:bg-slate-100 text-slate-400 font-bold text-[8px] rounded-full px-2 py-0.5 border border-slate-200 uppercase transition">Leave</button>`;
-    }
-
-    return `<li class="flex items-center justify-between p-2 rounded-lg border ${isWinner ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-slate-200'}"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full ${isWinner ? 'bg-yellow-500 animate-pulse' : 'bg-purple-500'}"></div><span class="text-xs font-bold ${isWinner ? 'text-yellow-700' : 'text-slate-700'}">${p}</span></div><div class="flex items-center">${isHostUser ? '<span class="text-[7px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${isWinner ? '<span class="text-[7px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase ml-1">WIN</span>' : ''}${actionBadge}</div></li>`;
-  }).join('');
-}
-
 async function kickPlayer(playerToKick) {
   if (!isHost || !confirm(`Remove ${playerToKick}?`)) return;
   const snapshot = await db.ref(`lobbies/${currentLobby}/players`).get();
@@ -622,7 +635,6 @@ function generateCard() {
   const tbody = document.querySelector('#bingoCard tbody');
   tbody.innerHTML = '';
   document.getElementById('cardOwnerName').textContent = myName || "Your Card";
-  // Card border set to white/neutral to match request
   document.getElementById('cardWrapper').style.backgroundColor = 'white';
 
   for (let r=0; r<5; r++) {
