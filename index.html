@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Brewed Potion Bingo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    /* --- BRANDING COLORS --- */
+    :root { 
+        --potion-purple: #8b5cf6; /* Violet-500 */
+        --deep-purple: #6d28d9;   /* Violet-700 */
+        --magic-pink: #ec4899;    /* Pink-500 */
+    }
+    
+    .bg-brand-primary { background-color: var(--deep-purple); }
+    .text-brand-primary { color: var(--deep-purple); }
+    .border-brand-primary { border-color: var(--deep-purple); }
+    
+    .bg-brand-secondary { background-color: var(--magic-pink); }
+    .text-brand-secondary { color: var(--magic-pink); }
+    .border-brand-secondary { border-color: var(--magic-pink); }
+
+    button { touch-action: manipulation; }
+    
+    .marked { position: relative; background-color: #10b981 !important; color: white !important; }
+    .marked::after { content: '✖'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.4); font-size: 1.2rem; }
+    .winning-cell { position: relative; background-color: #fef08a !important; color: #854d0e !important; }
+    .winning-cell::after { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 4px; background-color: var(--magic-pink); transform: translateY(-50%); z-index: 10; pointer-events: none; }
+    
+    .no-scrollbar::-webkit-scrollbar { width: 0px; }
+    #gamePlayerList::-webkit-scrollbar { width: 4px; }
+    #gamePlayerList::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    
+    @keyframes slot-spin { 0% { transform: translateY(-20px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
+    .slot-rolling { animation: slot-spin 0.1s linear infinite; color: var(--magic-pink) !important; }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+    @keyframes pop-up { 0% { transform: scale(0.5); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+    .animate-pop-up { animation: pop-up 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+  </style>
+</head>
+<body class="bg-purple-50 min-h-screen flex flex-col items-center p-2 md:p-4 font-sans text-slate-900 overflow-x-hidden">
+
+  <div class="flex flex-col items-center mb-4 md:mb-8 mt-2">
+    <div class="w-20 h-20 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-2 bg-white">
+      <img src="assets/brewed-potion-logo.png" onerror="this.src='https://placehold.co/150x150/6d28d9/ffffff?text=BP'" alt="Brewed Potion Logo" class="w-full h-full object-contain p-2">
+    </div>
+    <h1 class="text-xl md:text-2xl font-black tracking-tighter text-brand-primary uppercase">Brewed Potion Studios</h1>
+  </div>
+
+  <div id="screenInitial" class="bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-md flex flex-col gap-4 text-center border-t-8 border-brand-primary">
+    <button onclick="showScreen('screenCreate')" class="bg-brand-primary hover:opacity-90 text-white font-bold py-4 rounded-2xl transition shadow-md active:scale-95">CREATE ROOM</button>
+    <button onclick="showScreen('screenJoin')" class="bg-brand-secondary hover:opacity-90 text-white font-bold py-4 rounded-2xl transition shadow-md shadow-pink-200 active:scale-95">JOIN ROOM</button>
+  </div>
+
+  <div id="screenCreate" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-md border-t-8 border-brand-primary">
+    <h2 class="text-xl font-bold mb-4 text-brand-primary">Host a Game</h2>
+    <input id="hostName" type="text" placeholder="Your Name" class="border-2 rounded-xl p-3 w-full mb-4 outline-none focus:border-brand-primary appearance-none">
+    <button onclick="handleCreateLobby()" class="bg-brand-primary text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition">Generate Room Code</button>
+    <button onclick="showScreen('screenInitial')" class="text-slate-400 mt-4 w-full text-sm hover:underline text-center py-2">← Cancel</button>
+  </div>
+
+  <div id="screenJoin" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-md border-t-8 border-brand-secondary">
+    <h2 class="text-xl font-bold mb-4 text-brand-secondary">Join Room</h2>
+    <input id="playerName" type="text" placeholder="Your Name" class="border-2 rounded-xl p-3 w-full mb-3 outline-none focus:border-brand-secondary appearance-none">
+    <input id="joinCode" type="text" placeholder="Room Code" class="border-2 rounded-xl p-3 w-full mb-4 outline-none uppercase tracking-widest text-center font-bold appearance-none">
+    <button onclick="handleJoinLobby()" class="bg-brand-secondary text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition">Enter Room</button>
+    <button onclick="showScreen('screenInitial')" class="text-slate-400 mt-4 w-full text-sm hover:underline text-center py-2">← Cancel</button>
+  </div>
+
+  <div id="screenLobbyRoom" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-lg border-x-8 border-brand-primary">
+    <div class="text-center mb-6">
+      <span class="text-slate-400 uppercase text-xs font-bold tracking-widest">Room Code</span>
+      <div id="displayCode" class="text-5xl md:text-6xl font-black text-brand-primary mt-1">XXXXX</div>
+    </div>
+    <div class="flex justify-center mb-6">
+        <div id="qrcode" class="p-2 bg-white border-2 border-slate-100 rounded-xl shadow-sm"></div>
+    </div>
+    <div class="flex flex-col items-center gap-2 mt-4 mb-4">
+      <button onclick="copyInviteLink()" class="bg-purple-50 hover:bg-purple-100 text-brand-primary text-[10px] font-bold py-3 px-6 rounded-full transition flex items-center gap-2 active:bg-purple-200">
+        <span id="shareBtnText">COPY INVITE LINK</span>
+      </button>
+    </div>
+    <div class="bg-slate-50 rounded-2xl p-4 mb-6">
+      <h3 class="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        Waiting for Players...
+      </h3>
+      <ul id="playerList" class="space-y-2 max-h-40 overflow-y-auto"></ul>
+    </div>
+    <button onclick="enterGamePanel()" class="bg-brand-primary text-white font-bold py-4 rounded-2xl w-full shadow-xl active:scale-95 transition">ENTER GAME PANEL</button>
+    <button onclick="leaveRoom()" id="btnCancelLobby" class="hidden mt-4 text-slate-400 hover:text-brand-secondary text-[10px] font-bold uppercase tracking-widest w-full text-center transition py-2">
+      Close Room
+    </button>
+  </div>
+
+  <div id="gameArea" class="hidden w-full max-w-6xl flex flex-col gap-4 md:gap-6 pb-8 relative">
+    
+    <div class="grid lg:grid-cols-4 gap-4 md:gap-6 pt-2">
+      
+      <div class="lg:col-span-3 space-y-4 md:space-y-6">
+        <div class="grid md:grid-cols-3 gap-4 md:gap-6">
+          
+          <div class="bg-white p-4 md:p-6 rounded-3xl shadow-lg flex flex-col border-t-8 border-brand-primary order-2 md:order-1 h-full">
+            <div class="text-center mb-2 md:mb-4">
+              <h3 class="font-bold text-slate-400 text-[10px] mb-1 uppercase tracking-widest">Now Calling</h3>
+              <div id="bingoCurrent" class="text-5xl md:text-6xl font-black text-brand-primary leading-tight">-</div>
+            </div>
+            <div class="flex-1 flex flex-col border-t border-slate-100 pt-2 md:pt-4">
+              <h3 class="font-bold text-slate-400 text-[10px] mb-2 uppercase tracking-widest text-center">History</h3>
+              <div id="historyBox" class="w-full min-h-[3.5rem] transition-all duration-300">
+                  </div>
+            </div>
+          </div>
+
+          <div id="cardWrapper" class="md:col-span-2 p-3 md:p-6 rounded-3xl shadow-2xl transition-all border-brand-primary border-4 md:border-8 overflow-hidden order-1 md:order-2">
+            <div class="flex justify-between items-center mb-2 md:mb-6 text-white">
+              <div class="flex flex-col">
+                <h2 id="cardOwnerName" class="text-lg md:text-2xl font-black uppercase italic tracking-tighter truncate max-w-[150px] md:max-w-none">Your Card</h2>
+                <span class="text-[9px] md:text-[10px] opacity-75 uppercase font-bold">Brewed Potion Studios</span>
+              </div>
+              <div class="flex gap-1 md:gap-2">
+                <button onclick="downloadCard()" class="bg-green-600 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition">SAVE</button>
+                <button id="btnNewCard" onclick="generateCard()" class="bg-white text-brand-primary px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition">NEW</button>
+              </div>
+            </div>
+            <div class="flex justify-center overflow-x-auto pb-2">
+              <table id="bingoCard" class="border-separate border-spacing-1 md:border-spacing-2">
+                <thead class="text-white font-black text-xl md:text-3xl">
+                  <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+                </thead>
+                <tbody class="bg-white rounded-xl md:rounded-2xl overflow-hidden"></tbody>
+              </table>
+            </div>
+          </div> 
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 space-y-4 md:space-y-6">
+        
+        <div id="hostControlsPanel" class="hidden sticky top-4 z-20 bg-brand-primary p-3 md:p-4 rounded-3xl shadow-xl text-white space-y-2">
+          <button id="btnStartGame" onclick="triggerStartGame()" class="w-full bg-brand-secondary text-white font-bold py-2 rounded-xl shadow-lg transition active:scale-95 text-sm md:text-base">START GAME</button>
+          <div id="activeHostButtons" class="hidden space-y-2">
+            <button onclick="callNumber()" class="w-full bg-green-500 text-white font-bold py-2 rounded-xl shadow-inner active:scale-95 transition text-base md:text-lg">CALL NUMBER</button>
+            <div class="grid grid-cols-2 gap-2">
+               <button onclick="toggleJackpotMode()" id="jackpotBtn" class="w-full border border-white/30 hover:bg-white/10 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition uppercase">BLACKOUT</button>
+               <button onclick="resetBingo()" class="w-full text-white/50 text-[9px] md:text-[10px] font-bold py-1.5 uppercase hover:text-white transition">RESET</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 md:p-6 rounded-3xl shadow-md border-b-4 border-slate-200">
+          <div class="mb-2 text-center">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Room</span>
+            <div id="gameRoomCode" class="text-xl md:text-2xl font-black text-brand-primary tracking-widest">XXXXX</div>
+          </div>
+          <div class="flex flex-col items-center gap-2 mt-2 mb-2">
+            <button onclick="copyInviteLink()" class="bg-slate-100 hover:bg-slate-200 text-brand-primary text-[10px] font-bold py-2 px-4 rounded-full transition flex items-center gap-2 w-full justify-center">
+              <span id="shareBtnText">COPY INVITE LINK</span>
+            </button>
+            <button id="btnGameLeave" onclick="leaveRoom()" class="hidden w-full mt-2 text-slate-400 hover:text-brand-secondary text-[10px] font-bold uppercase tracking-widest transition border-t pt-2">
+              End Game
+            </button>
+          </div>
+          <h3 class="font-bold text-slate-400 text-xs uppercase mb-2 tracking-widest border-t pt-2">Players</h3>
+          <ul id="gamePlayerList" class="space-y-1 max-h-48 overflow-y-auto pr-2"></ul>
+          <div id="jackpotStatus" class="mt-4 text-center p-2 bg-brand-secondary text-white rounded-lg text-xs font-bold hidden animate-bounce">BLACKOUT MODE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="winnerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-t-8 border-yellow-400 animate-pop-up relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full bg-yellow-50 opacity-50 pointer-events-none"></div>
+        <div class="relative z-10">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 class="text-3xl font-black text-brand-primary uppercase italic tracking-tighter mb-2">BINGO!</h2>
+            <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Congratulations</p>
+            <div id="winnerNameDisplay" class="text-2xl font-bold text-brand-secondary mb-8 animate-bounce">
+                PLAYER NAME
+            </div>
+            <button id="modalActionBtn" onclick="closeWinnerModal()" class="bg-brand-primary text-white font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition uppercase text-sm">
+                Keep Playing
+            </button>
+        </div>
+    </div>
+  </div>
+
+  <footer class="mt-8 mb-8 flex flex-col items-center gap-4 opacity-60">
+    <div class="h-px w-24 bg-slate-300"></div>
+    <div class="flex items-center gap-2">
+      <img src="https://scrmbldgreg.github.io/bingo-manila/assets/gemini-ai-logo.png" alt="Gemini Logo" class="w-4 h-4 md:w-6 md:h-6 animate-pulse">
+      <p class="text-[8px] md:text-[10px] font-bold tracking-[0.2em] text-brand-primary uppercase">Powered by Gemini AI</p>
+    </div>
+    <p class="text-[8px] font-medium text-slate-400 tracking-wider uppercase">&copy; 2026 Brewed Potion Studios</p>
+  </footer>
+
+<script>
+/* ================= FIREBASE CONFIG ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBznF9jfkpSnKigpMnM706dXL_ZMOjUOAw",
+  authDomain: "bingo-manila.firebaseapp.com",
+  databaseURL: "https://bingo-manila-default-rtdb.firebaseio.com", 
+  projectId: "bingo-manila",
+  storageBucket: "bingo-manila.firebasestorage.app",
+  messagingSenderId: "792321653174",
+  appId: "1:792321653174:web:1cf7c925f055b7134f6917",
+  measurementId: "G-4Q004H7XWG"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const LOBBY_LIFETIME = 3 * 60 * 60 * 1000; // Server lobby life
+const INACTIVITY_LIMIT = 2 * 60 * 60 * 1000; // 2 Hours (Client side)
+let currentLobby = null, myName = null, isHost = false;
+let gameNumbersPool = [], calledNumbers = [], isJackpotMode = false, gameStarted = false;
+let isRolling = false;
+let displayedWinners = new Set(); 
+
+/* ================= NAVIGATION ================= */
+function showScreen(id) {
+  ['screenInitial', 'screenCreate', 'screenJoin', 'screenLobbyRoom', 'gameArea'].forEach(s => 
+    document.getElementById(s).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+/* ================= SESSION RECOVERY ================= */
+window.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const roomFromUrl = params.get('room');
+  const savedSession = localStorage.getItem('bingo_session');
+
+  if (savedSession) {
+    const session = JSON.parse(savedSession);
+    
+    // --- CHECK FOR INACTIVITY ---
+    const lastActive = session.lastActive || 0;
+    if (Date.now() - lastActive > INACTIVITY_LIMIT) {
+        console.log("Session expired due to inactivity.");
+        localStorage.removeItem('bingo_session');
+    } else {
+        // Session is fresh, try to connect
+        const snapshot = await db.ref('lobbies/' + session.lobby).get();
+        
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          if (checkExpiration(data.createdAt)) return;
+          
+          currentLobby = session.lobby;
+          myName = session.name;
+          isHost = (data.host === myName);
+          
+          if (isHost) {
+            db.ref(`lobbies/${currentLobby}/hostActive`).set(true);
+            db.ref(`lobbies/${currentLobby}/hostActive`).onDisconnect().set(false);
+          }
+          setupLobby();
+          if (data.gameState && data.gameState.gameStarted) {
+              setTimeout(enterGamePanel, 500);
+          }
+          return;
+        } else {
+          localStorage.removeItem('bingo_session');
+        }
+    }
+  } 
+  
+  if (roomFromUrl) {
+    showScreen('screenJoin');
+    document.getElementById('joinCode').value = roomFromUrl.toUpperCase();
+  }
+});
+
+/* ================= CLOUD LOGIC ================= */
+function checkExpiration(createdAt) {
+  if (createdAt && (Date.now() - createdAt > LOBBY_LIFETIME)) {
+    alert("Session expired.");
+    localStorage.removeItem('bingo_session');
+    if (currentLobby) leaveRoom(true); 
+    else location.reload();
+    return true;
+  }
+  return false;
+}
+
+async function handleCreateLobby() {
+  const name = document.getElementById('hostName').value.trim();
+  if (!name) return alert("Enter name");
+  const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+  currentLobby = code; myName = name; isHost = true;
+
+  await db.ref('lobbies/' + code).set({
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    host: name, 
+    players: [name],
+    hostActive: true,
+    gameState: { calledNumbers: [], isJackpotMode: false, gameStarted: false, winners: [], lastNum: '-' }
+  });
+  db.ref(`lobbies/${code}/hostActive`).onDisconnect().set(false);
+  setupLobby();
+}
+
+async function handleJoinLobby() {
+  const name = document.getElementById('playerName').value.trim();
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  if (!name || !code) return alert("Enter name and code");
+
+  const snapshot = await db.ref('lobbies/' + code).get();
+  if (!snapshot.exists()) return alert("Room not found");
+  const data = snapshot.val();
+  if (checkExpiration(data.createdAt)) return;
+
+  const existingPlayers = data.players || [];
+  if (existingPlayers.some(p => p.toLowerCase() === name.toLowerCase())) return alert("Name taken!");
+
+  existingPlayers.push(name);
+  await db.ref('lobbies/' + code + '/players').set(existingPlayers);
+  currentLobby = code; myName = name; isHost = false;
+  setupLobby();
+}
+
+function setupLobby() {
+  // --- SAVE WITH TIMESTAMP ---
+  const updateSession = () => {
+      localStorage.setItem('bingo_session', JSON.stringify({ 
+          lobby: currentLobby, 
+          name: myName, 
+          isHost: isHost,
+          lastActive: Date.now() 
+      }));
+  };
+  
+  updateSession();
+  setInterval(updateSession, 5 * 60 * 1000);
+  
+  document.getElementById('displayCode').textContent = currentLobby;
+  showScreen('screenLobbyRoom');
+  
+  const qrContainer = document.getElementById('qrcode');
+  if (qrContainer) {
+    qrContainer.innerHTML = '';
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${currentLobby}`;
+    new QRCode(qrContainer, {
+        text: inviteUrl, width: 100, height: 100,
+        colorDark : "#6d28d9", colorLight : "#ffffff", // Updated to Purple
+        correctLevel : QRCode.CorrectLevel.L
+    });
+  }
+
+  const cancelBtn = document.getElementById('btnCancelLobby');
+  if (cancelBtn) cancelBtn.classList.toggle('hidden', !isHost);
+  
+  db.ref('lobbies/' + currentLobby).on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (!data) {
+      alert("Session ended.");
+      localStorage.removeItem('bingo_session');
+      location.href = window.location.pathname; 
+      return;
+    }
+    if (checkExpiration(data.createdAt)) return;
+
+    const players = data.players || [];
+    const lobbyList = document.getElementById('playerList');
+    if (lobbyList) {
+        lobbyList.innerHTML = players.map(p => {
+          const isHostUser = (p === data.host);
+          const isMe = (p === myName);
+          const kickBtn = (isHost && !isMe) ? 
+            `<button onclick="kickPlayer('${p}')" class="ml-2 text-brand-secondary font-bold text-[8px] uppercase border border-pink-200 px-2 py-1 rounded-md hover:bg-pink-50">Kick</button>` : '';
+          const leaveBtn = (isMe && !isHost) ? 
+            `<button onclick="leaveRoom()" class="ml-2 text-slate-400 font-bold text-[8px] uppercase border border-slate-200 px-2 py-1 rounded-md hover:bg-slate-50">Leave</button>` : '';
+          return `<li class="p-2 bg-white rounded-lg border border-slate-100 flex justify-between items-center text-xs shadow-sm animate-fade-in"><span class="font-bold text-slate-700">${p}</span><div class="flex items-center gap-1">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-2 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${kickBtn} ${leaveBtn}</div></li>`;
+        }).join('');
+    }
+    
+    if (!data.gameState) return;
+
+    gameStarted = data.gameState.gameStarted;
+    calledNumbers = data.gameState.calledNumbers || [];
+    isJackpotMode = data.gameState.isJackpotMode;
+    
+    let currentWinners = data.gameState.winners || [];
+    if (typeof currentWinners === 'string') currentWinners = [currentWinners];
+    else if (!Array.isArray(currentWinners)) currentWinners = Object.values(currentWinners);
+
+    currentWinners.forEach(w => {
+        if (!displayedWinners.has(w)) {
+            triggerWinnerPopup(w);
+            displayedWinners.add(w);
+        }
+    });
+
+    updatePlayerUI(players, data.host, currentWinners);
+    render(data.gameState);
+  });
+}
+
+function enterGamePanel() {
+  showScreen('gameArea');
+  document.getElementById('gameRoomCode').textContent = currentLobby;
+  
+  if (isHost) {
+    document.getElementById('hostControlsPanel').classList.remove('hidden');
+    document.getElementById('btnGameLeave').classList.remove('hidden'); 
+    const flatCalled = calledNumbers.map(n => parseInt(n.split('-')[1]));
+    gameNumbersPool = Array.from({length: 75}, (_, i) => i + 1).filter(n => !flatCalled.includes(n));
+    if (gameStarted) {
+       document.getElementById('btnStartGame').classList.add('hidden');
+       document.getElementById('activeHostButtons').classList.remove('hidden');
+    }
+  } else {
+    document.getElementById('btnGameLeave').classList.add('hidden'); 
+  }
+  generateCard();
+}
+
+/* ================= GAMEPLAY ================= */
+function triggerStartGame() {
+  if (!confirm("Start game?")) return;
+  gameNumbersPool = Array.from({length: 75}, (_, i) => i + 1);
+  db.ref('lobbies/' + currentLobby + '/gameState').update({ 
+    gameStarted: true, winners: [], calledNumbers: [], lastNum: '-' 
+  });
+  displayedWinners.clear();
+  document.getElementById('btnStartGame').classList.add('hidden');
+  document.getElementById('activeHostButtons').classList.remove('hidden');
+}
+
+function callNumber() {
+  if (gameNumbersPool.length === 0) {
+    const flatCalled = calledNumbers.map(n => parseInt(n.split('-')[1]));
+    gameNumbersPool = Array.from({length: 75}, (_, i) => i + 1).filter(n => !flatCalled.includes(n));
+  }
+  if (gameNumbersPool.length === 0) return alert("All numbers called!");
+  const idx = Math.floor(Math.random() * gameNumbersPool.length);
+  const num = gameNumbersPool.splice(idx, 1)[0];
+  const label = (num<=15?'B':num<=30?'I':num<=45?'N':num<=60?'G':'O') + "-" + num;
+  calledNumbers.push(label);
+  db.ref('lobbies/' + currentLobby + '/gameState').update({ calledNumbers, lastNum: label });
+}
+
+function toggleJackpotMode() {
+  db.ref('lobbies/' + currentLobby + '/gameState').update({ isJackpotMode: !isJackpotMode });
+}
+
+async function leaveRoom(force = false) {
+  if (!force && !confirm(isHost ? "End game?" : "Leave game?")) return;
+  if (isHost) await db.ref(`lobbies/${currentLobby}`).remove();
+  else {
+    const snapshot = await db.ref(`lobbies/${currentLobby}/players`).get();
+    let players = (snapshot.val() || []).filter(p => p !== myName);
+    await db.ref(`lobbies/${currentLobby}/players`).set(players);
+  }
+  localStorage.removeItem('bingo_session');
+  location.href = window.location.pathname;
+}
+
+/* ================= WINNER POPUP ================= */
+function triggerWinnerPopup(winnerName) {
+    document.getElementById('winnerNameDisplay').textContent = winnerName;
+    const btn = document.getElementById('modalActionBtn');
+    if (isJackpotMode) {
+      btn.textContent = "NEW GAME";
+    } else {
+      btn.textContent = "KEEP PLAYING";
+    }
+
+    const modal = document.getElementById('winnerModal');
+    modal.classList.remove('hidden');
+    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+}
+
+function closeWinnerModal() {
+    document.getElementById('winnerModal').classList.add('hidden');
+}
+
+/* ================= UI RENDERING ================= */
+function render(state) {
+  const display = document.getElementById('bingoCurrent');
+  const newNum = state.lastNum || '-';
+  const nums = state.calledNumbers || [];
+  const historyBox = document.getElementById('historyBox');
+
+  const updateGroupedHistory = (numberList) => {
+    const groups = { B: [], I: [], N: [], G: [], O: [] };
+    numberList.forEach(n => {
+      const [letter, num] = n.split('-');
+      if (groups[letter]) groups[letter].push(parseInt(num));
+    });
+
+    let html = '<div class="grid grid-cols-5 gap-0.5 md:gap-1 w-full h-full">';
+    ['B','I','N','G','O'].forEach(letter => {
+       html += `
+        <div class="flex flex-col gap-1 items-center bg-slate-50 rounded-lg py-1 border border-slate-100 h-full">
+           <div class="font-black text-brand-primary text-[10px] md:text-sm border-b-2 border-slate-200 w-full text-center pb-1">${letter}</div>
+           <div class="flex flex-col gap-0.5 w-full items-center h-full px-1">
+             ${groups[letter].sort((a,b)=>a-b).map(n => 
+                `<span class="text-[9px] md:text-xs font-bold text-slate-700 bg-white border border-slate-200 w-full text-center rounded shadow-sm">${n}</span>`
+             ).join('')}
+           </div>
+        </div>`;
+    });
+    html += '</div>';
+    historyBox.innerHTML = html;
+  };
+
+  if (newNum !== display.dataset.current && newNum !== '-' && !isRolling) {
+    isRolling = true;
+    display.classList.add('slot-rolling');
+    updateGroupedHistory(nums.slice(0,-1));
+    let rollCount = 0;
+    const rollInterval = setInterval(() => {
+      const letters = ['B','I','N','G','O'];
+      display.textContent = `${letters[Math.floor(Math.random()*5)]}-${Math.floor(Math.random()*75)+1}`;
+      if (++rollCount > 10) {
+        clearInterval(rollInterval);
+        display.classList.remove('slot-rolling');
+        display.textContent = newNum;
+        display.dataset.current = newNum;
+        isRolling = false;
+        updateGroupedHistory(nums);
+      }
+    }, 80);
+  } else if (!isRolling) {
+    display.textContent = newNum;
+    display.dataset.current = newNum;
+    updateGroupedHistory(nums);
+  }
+
+  if (!state.gameStarted) clearCardMarksUI();
+  
+  const btn = document.getElementById('btnNewCard');
+  if (state.gameStarted) {
+    btn.disabled = true;
+    btn.className = "bg-slate-200 text-slate-400 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs cursor-not-allowed";
+    btn.textContent = "LOCKED";
+  } else {
+    btn.disabled = false;
+    btn.className = "bg-white text-brand-primary px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition";
+    btn.textContent = "NEW";
+  }
+  document.getElementById('jackpotStatus').classList.toggle('hidden', !state.isJackpotMode);
+  document.getElementById('jackpotBtn').textContent = state.isJackpotMode ? "CLASSIC" : "BLACKOUT";
+}
+
+function clearCardMarksUI() {
+  document.querySelectorAll('#bingoCard td').forEach(td => {
+    td.classList.remove('marked', 'winning-cell');
+    td.classList.add('bg-white');
+    if (td.textContent === "FREE") {
+      td.classList.remove('bg-white'); td.classList.add('marked');
+    }
+  });
+}
+
+function updatePlayerUI(players, hostName, winnerList) {
+  const gameList = document.getElementById('gamePlayerList');
+  if (!gameList) return;
+  gameList.innerHTML = players.map(p => {
+    const isWinner = winnerList.includes(p);
+    const isHostUser = (p === hostName);
+    const isMe = (p === myName);
+    
+    let actionBadge = '';
+    if (isHost && !isMe) {
+        actionBadge = `<button onclick="kickPlayer('${p}')" class="ml-1 bg-red-100 hover:bg-red-200 text-red-600 font-bold text-[8px] rounded-full px-2 py-0.5 border border-red-200 uppercase transition">Kick</button>`;
+    } else if (!isHost && isMe) {
+        actionBadge = `<button onclick="leaveRoom()" class="ml-1 bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold text-[8px] rounded-full px-2 py-0.5 border border-slate-200 uppercase transition">Leave</button>`;
+    }
+
+    return `<li class="flex items-center justify-between p-2 rounded-lg border ${isWinner ? 'bg-yellow-50 border-yellow-400' : 'bg-slate-50 border-slate-100'}"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full ${isWinner ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}"></div><span class="text-xs font-bold ${isWinner ? 'text-yellow-900' : 'text-slate-700'}">${p}</span></div><div class="flex items-center">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-1.5 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${isWinner ? '<span class="text-[7px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase ml-1">WIN</span>' : ''}${actionBadge}</div></li>`;
+  }).join('');
+}
+
+async function kickPlayer(playerToKick) {
+  if (!isHost || !confirm(`Remove ${playerToKick}?`)) return;
+  const snapshot = await db.ref(`lobbies/${currentLobby}/players`).get();
+  await db.ref(`lobbies/${currentLobby}/players`).set((snapshot.val() || []).filter(p => p !== playerToKick));
+}
+
+function generateCard() {
+  clearCardMarksUI();
+  const ranges = [[1,15],[16,30],[31,45],[46,60],[61,75]];
+  const cols = ranges.map(r => Array.from({length: 15}, (_,i)=>i+r[0]).sort(()=>Math.random()-0.5).slice(0,5));
+  const tbody = document.querySelector('#bingoCard tbody');
+  tbody.innerHTML = '';
+  document.getElementById('cardOwnerName').textContent = myName || "Your Card";
+  // Randomly assign Purple or Pink to the card border
+  document.getElementById('cardWrapper').style.backgroundColor = (Math.random() > 0.5) ? 'var(--deep-purple)' : 'var(--magic-pink)';
+
+  for (let r=0; r<5; r++) {
+    const tr = document.createElement('tr');
+    for (let c=0; c<5; c++) {
+      const td = document.createElement('td');
+      td.className = "w-11 h-11 sm:w-14 sm:h-14 md:w-20 md:h-20 bg-white border-2 border-slate-200 text-sm sm:text-lg md:text-xl font-black cursor-pointer text-center text-brand-primary shadow-inner touch-manipulation active:bg-slate-100";
+      const val = cols[c][r];
+      const label = (val<=15?'B':val<=30?'I':val<=45?'N':val<=60?'G':'O') + "-" + val;
+      if (r===2 && c===2) { 
+        td.textContent="FREE"; td.classList.add('bg-brand-secondary', 'marked', 'text-white', 'text-[8px]'); 
+      } else { 
+        td.textContent = val; td.dataset.label = label; 
+        td.onclick = () => { 
+            if (r===2 && c===2) return; 
+            if (calledNumbers.includes(label)) { 
+                td.classList.toggle('marked'); 
+                checkWin(); 
+            } else { 
+                alert("Number not drawn yet!"); 
+            } 
+        };
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+async function announceWin() {
+  if (!displayedWinners.has(myName)) {
+      triggerWinnerPopup(myName);
+      displayedWinners.add(myName);
+  }
+
+  const snapshot = await db.ref(`lobbies/${currentLobby}/gameState/winners`).get();
+  let winners = snapshot.val() || [];
+  
+  if (typeof winners === 'string') winners = [winners];
+  else if (!Array.isArray(winners)) winners = Object.values(winners);
+
+  if (!winners.includes(myName)) {
+    winners.push(myName);
+    await db.ref(`lobbies/${currentLobby}/gameState/winners`).set(winners);
+  }
+}
+
+function checkWin() {
+  const board = Array.from(document.querySelectorAll('#bingoCard tr')).slice(1).map(tr => Array.from(tr.querySelectorAll('td')));
+  const isMarked = (td) => td.classList.contains('marked');
+  let win = false;
+  if (isJackpotMode) { if (board.flat().every(isMarked)) win = true; } 
+  else {
+    for (let i=0; i<5; i++) {
+        if (board[i].every(isMarked)) win = true;
+        if (board.map(r => r[i]).every(isMarked)) win = true;
+    }
+    if ([0,1,2,3,4].every(i => isMarked(board[i][i]))) win = true;
+    if ([0,1,2,3,4].every(i => isMarked(board[i][4-i]))) win = true;
+  }
+  if (win) announceWin();
+}
+
+async function downloadCard() {
+  const canvas = await html2canvas(document.getElementById('cardWrapper'), { scale: 2 });
+  const link = document.createElement('a');
+  link.download = `${myName}-BrewedPotionBingo.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+}
+
+function copyInviteLink() {
+  const url = `${window.location.origin}${window.location.pathname}?room=${currentLobby}`;
+  navigator.clipboard.writeText(url).then(() => {
+    document.getElementById('shareBtnText').textContent = "COPIED!";
+    setTimeout(() => { document.getElementById('shareBtnText').textContent = "COPY INVITE LINK"; }, 2000);
+  });
+}
+
+function resetBingo() {
+  if (!isHost || !confirm("Reset game?")) return;
+  gameNumbersPool = Array.from({length: 75}, (_, i) => i + 1);
+  db.ref('lobbies/' + currentLobby + '/gameState').set({ 
+    calledNumbers: [], isJackpotMode: false, gameStarted: false, winners: [], lastNum: '-' 
+  });
+  document.getElementById('btnStartGame').classList.remove('hidden');
+  document.getElementById('activeHostButtons').classList.add('hidden');
+  displayedWinners.clear();
+}
+</script>
+</body>
+</html>
