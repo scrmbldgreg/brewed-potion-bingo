@@ -11,16 +11,24 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    /* --- DARK BRANDING COLORS --- */
+    /* --- SOFT DARK BRANDING --- */
     :root { 
-        --potion-glow: #a78bfa;   /* Violet-400 (Text/Glow) */
-        --potion-dim: #7c3aed;    /* Violet-600 (Primary Buttons) */
-        --magic-pink: #db2777;    /* Pink-600 (Secondary) */
-        --dark-bg: #0f172a;       /* Slate-900 (Main BG) */
-        --panel-bg: #1e293b;      /* Slate-800 (Cards) */
+        /* Brand Colors */
+        --potion-glow: #a78bfa;   /* Violet-400 */
+        --potion-dim: #6d28d9;    /* Violet-700 */
+        --magic-pink: #be185d;    /* Pink-700 */
+        --mystic-teal: #0f766e;   /* Teal-700 (New "Green") */
+        
+        /* Backgrounds */
+        --dark-bg: #1e293b;       /* Slate-800 */
+        --panel-bg: #334155;      /* Slate-700 */
+        
+        /* Text */
+        --text-main: #e2e8f0;     /* Slate-200 */
+        --text-muted: #94a3b8;    /* Slate-400 */
     }
     
-    body { background-color: var(--dark-bg); color: #f1f5f9; }
+    body { background-color: var(--dark-bg); color: var(--text-main); }
 
     .bg-brand-primary { background-color: var(--potion-dim); }
     .text-brand-primary { color: var(--potion-glow); }
@@ -30,33 +38,37 @@
     .text-brand-secondary { color: #f472b6; } 
     .border-brand-secondary { border-color: var(--magic-pink); }
     
-    /* Panel Styles */
     .glass-panel {
         background-color: var(--panel-bg);
-        border: 1px solid #334155;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        border: 1px solid #475569;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     }
 
     button { touch-action: manipulation; }
     
-    /* Bingo Cell Styles - Kept light for readability, but softer */
     .bingo-cell {
-        background-color: #f8fafc;
-        color: #1e293b;
+        background-color: #f8fafc; 
+        color: #1e293b;            
     }
     
-    .marked { position: relative; background-color: #059669 !important; color: white !important; border-color: #047857 !important; }
-    .marked::after { content: '✖'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.6); font-size: 1.2rem; }
+    /* --- UPDATED: MYSTIC TEAL MARKER --- */
+    .marked { 
+        position: relative; 
+        background-color: var(--mystic-teal) !important; 
+        color: #ccfbf1 !important; /* Teal-100 text */
+        border-color: #115e59 !important; /* Teal-800 border */
+    }
+    .marked::after { content: '✖'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(0,0,0,0.2); font-size: 1.2rem; }
     
     .winning-cell { position: relative; background-color: #fef08a !important; color: #854d0e !important; }
     .winning-cell::after { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 4px; background-color: var(--magic-pink); transform: translateY(-50%); z-index: 10; pointer-events: none; }
     
     .no-scrollbar::-webkit-scrollbar { width: 0px; }
     #gamePlayerList::-webkit-scrollbar { width: 4px; }
-    #gamePlayerList::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+    #gamePlayerList::-webkit-scrollbar-thumb { background: #64748b; border-radius: 10px; }
     
     @keyframes slot-spin { 0% { transform: translateY(-20px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
-    .slot-rolling { animation: slot-spin 0.1s linear infinite; color: var(--magic-pink) !important; }
+    .slot-rolling { animation: slot-spin 0.1s linear infinite; color: var(--potion-glow) !important; }
     @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
     @keyframes pop-up { 0% { transform: scale(0.5); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
@@ -66,54 +78,53 @@
 <body class="min-h-screen flex flex-col items-center p-2 md:p-4 font-sans overflow-x-hidden">
 
   <div class="flex flex-col items-center mb-4 md:mb-8 mt-2">
-    <div class="w-20 h-20 md:w-32 md:h-32 rounded-full border-4 border-slate-700 shadow-xl flex items-center justify-center overflow-hidden mb-2 bg-white">
+    <div class="w-20 h-20 md:w-32 md:h-32 rounded-full border-4 border-slate-600 shadow-xl flex items-center justify-center overflow-hidden mb-2 bg-white">
       <img src="https://scrmbldgreg.github.io/brewed-potion-bingo/assets/bps-logo.jpg" onerror="this.src='https://placehold.co/150x150/6d28d9/ffffff?text=BP'" alt="Brewed Potion Logo" class="w-full h-full object-contain p-2">
     </div>
-    <h1 class="text-xl md:text-2xl font-black tracking-tighter text-brand-primary uppercase drop-shadow-md">Brewed Potion Studios</h1>
+    <h1 class="text-xl md:text-2xl font-black tracking-tighter text-brand-primary uppercase">Brewed Potion Studios</h1>
   </div>
 
   <div id="screenInitial" class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md flex flex-col gap-4 text-center border-t-4 border-brand-primary">
-    <button onclick="showScreen('screenCreate')" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-violet-900/50 active:scale-95">CREATE ROOM</button>
-    <button onclick="showScreen('screenJoin')" class="bg-brand-secondary hover:bg-pink-500 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-pink-900/50 active:scale-95">JOIN ROOM</button>
+    <button onclick="showScreen('screenCreate')" class="bg-brand-primary hover:bg-violet-600 text-slate-100 font-bold py-4 rounded-2xl transition shadow-md active:scale-95">CREATE ROOM</button>
+    <button onclick="showScreen('screenJoin')" class="bg-brand-secondary hover:bg-pink-600 text-slate-100 font-bold py-4 rounded-2xl transition shadow-md active:scale-95">JOIN ROOM</button>
   </div>
 
   <div id="screenCreate" class="hidden glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md border-t-4 border-brand-primary">
     <h2 class="text-xl font-bold mb-4 text-brand-primary">Host a Game</h2>
-    <input id="hostName" type="text" placeholder="Your Name" class="bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-xl p-3 w-full mb-4 outline-none focus:border-brand-primary appearance-none transition">
-    <button onclick="handleCreateLobby()" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition shadow-lg">Generate Room Code</button>
-    <button onclick="showScreen('screenInitial')" class="text-slate-500 mt-4 w-full text-sm hover:text-slate-300 hover:underline text-center py-2">← Cancel</button>
+    <input id="hostName" type="text" placeholder="Your Name" class="bg-slate-800 border border-slate-600 text-slate-200 placeholder-slate-500 rounded-xl p-3 w-full mb-4 outline-none focus:border-brand-primary appearance-none transition">
+    <button onclick="handleCreateLobby()" class="bg-brand-primary hover:bg-violet-600 text-slate-100 font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition shadow-md">Generate Room Code</button>
+    <button onclick="showScreen('screenInitial')" class="text-slate-400 mt-4 w-full text-sm hover:text-slate-200 hover:underline text-center py-2">← Cancel</button>
   </div>
 
   <div id="screenJoin" class="hidden glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md border-t-4 border-brand-secondary">
     <h2 class="text-xl font-bold mb-4 text-brand-secondary">Join Room</h2>
-    <input id="playerName" type="text" placeholder="Your Name" class="bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-xl p-3 w-full mb-3 outline-none focus:border-brand-secondary appearance-none transition">
-    <input id="joinCode" type="text" placeholder="Room Code" class="bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-xl p-3 w-full mb-4 outline-none uppercase tracking-widest text-center font-bold appearance-none transition">
-    <button onclick="handleJoinLobby()" class="bg-brand-secondary hover:bg-pink-500 text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition shadow-lg">Enter Room</button>
-    <button onclick="showScreen('screenInitial')" class="text-slate-500 mt-4 w-full text-sm hover:text-slate-300 hover:underline text-center py-2">← Cancel</button>
+    <input id="playerName" type="text" placeholder="Your Name" class="bg-slate-800 border border-slate-600 text-slate-200 placeholder-slate-500 rounded-xl p-3 w-full mb-3 outline-none focus:border-brand-secondary appearance-none transition">
+    <input id="joinCode" type="text" placeholder="Room Code" class="bg-slate-800 border border-slate-600 text-slate-200 placeholder-slate-500 rounded-xl p-3 w-full mb-4 outline-none uppercase tracking-widest text-center font-bold appearance-none transition">
+    <button onclick="handleJoinLobby()" class="bg-brand-secondary hover:bg-pink-600 text-slate-100 font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition shadow-md">Enter Room</button>
+    <button onclick="showScreen('screenInitial')" class="text-slate-400 mt-4 w-full text-sm hover:text-slate-200 hover:underline text-center py-2">← Cancel</button>
   </div>
 
   <div id="screenLobbyRoom" class="hidden glass-panel p-6 md:p-8 rounded-3xl w-full max-w-lg border-x-4 border-brand-primary">
     <div class="text-center mb-6">
-      <span class="text-slate-500 uppercase text-xs font-bold tracking-widest">Room Code</span>
-      <div id="displayCode" class="text-5xl md:text-6xl font-black text-brand-primary mt-1 drop-shadow-sm">XXXXX</div>
+      <span class="text-slate-400 uppercase text-xs font-bold tracking-widest">Room Code</span>
+      <div id="displayCode" class="text-5xl md:text-6xl font-black text-brand-primary mt-1">XXXXX</div>
     </div>
     <div class="flex justify-center mb-6">
-        <div id="qrcode" class="p-2 bg-white border-2 border-slate-200 rounded-xl shadow-inner"></div>
+        <div id="qrcode" class="p-2 bg-white border-4 border-slate-200 rounded-xl shadow-sm"></div>
     </div>
     <div class="flex flex-col items-center gap-2 mt-4 mb-4">
-      <button onclick="copyInviteLink()" class="bg-slate-700 hover:bg-slate-600 text-brand-primary text-[10px] font-bold py-3 px-6 rounded-full transition flex items-center gap-2 active:bg-slate-500 border border-slate-600">
+      <button onclick="copyInviteLink()" class="bg-slate-800 hover:bg-slate-600 text-brand-primary text-[10px] font-bold py-3 px-6 rounded-full transition flex items-center gap-2 active:bg-slate-700 border border-slate-600">
         <span id="shareBtnText">COPY INVITE LINK</span>
       </button>
     </div>
-    <div class="bg-slate-900/50 rounded-2xl p-4 mb-6 border border-slate-700/50">
+    <div class="bg-slate-800/50 rounded-2xl p-4 mb-6 border border-slate-600/50">
       <h3 class="font-bold text-slate-400 mb-3 flex items-center gap-2 text-sm">
-        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        Waiting for Players...
+        <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span> Waiting for Players...
       </h3>
       <ul id="playerList" class="space-y-2 max-h-40 overflow-y-auto"></ul>
     </div>
-    <button onclick="enterGamePanel()" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-4 rounded-2xl w-full shadow-xl active:scale-95 transition">ENTER GAME PANEL</button>
-    <button onclick="leaveRoom()" id="btnCancelLobby" class="hidden mt-4 text-slate-600 hover:text-red-400 text-[10px] font-bold uppercase tracking-widest w-full text-center transition py-2">
+    <button onclick="enterGamePanel()" class="bg-brand-primary hover:bg-violet-600 text-slate-100 font-bold py-4 rounded-2xl w-full shadow-lg active:scale-95 transition">ENTER GAME PANEL</button>
+    <button onclick="leaveRoom()" id="btnCancelLobby" class="hidden mt-4 text-slate-400 hover:text-red-400 text-[10px] font-bold uppercase tracking-widest w-full text-center transition py-2">
       Close Room
     </button>
   </div>
@@ -127,33 +138,33 @@
           
           <div class="glass-panel p-4 md:p-6 rounded-3xl shadow-lg flex flex-col border-t-4 border-brand-primary order-2 md:order-1 h-full">
             <div class="text-center mb-2 md:mb-4">
-              <h3 class="font-bold text-slate-500 text-[10px] mb-1 uppercase tracking-widest">Now Calling</h3>
-              <div id="bingoCurrent" class="text-5xl md:text-6xl font-black text-brand-primary leading-tight drop-shadow-md">-</div>
+              <h3 class="font-bold text-slate-400 text-[10px] mb-1 uppercase tracking-widest">Now Calling</h3>
+              <div id="bingoCurrent" class="text-5xl md:text-6xl font-black text-brand-primary leading-tight">-</div>
             </div>
-            <div class="flex-1 flex flex-col border-t border-slate-700 pt-2 md:pt-4">
-              <h3 class="font-bold text-slate-500 text-[10px] mb-2 uppercase tracking-widest text-center">History</h3>
+            <div class="flex-1 flex flex-col border-t border-slate-600 pt-2 md:pt-4">
+              <h3 class="font-bold text-slate-400 text-[10px] mb-2 uppercase tracking-widest text-center">History</h3>
               <div id="historyBox" class="w-full min-h-[3.5rem] transition-all duration-300">
                   </div>
             </div>
           </div>
 
           <div id="cardWrapper" class="md:col-span-2 p-3 md:p-6 rounded-3xl shadow-2xl transition-all border-brand-primary border-4 md:border-8 overflow-hidden order-1 md:order-2">
-            <div class="flex justify-between items-center mb-2 md:mb-6 text-white">
+            <div class="flex justify-between items-center mb-2 md:mb-6 text-slate-100">
               <div class="flex flex-col">
-                <h2 id="cardOwnerName" class="text-lg md:text-2xl font-black uppercase italic tracking-tighter truncate max-w-[150px] md:max-w-none text-shadow-sm">Your Card</h2>
-                <span class="text-[9px] md:text-[10px] opacity-80 uppercase font-bold text-slate-200">Brewed Potion Studios</span>
+                <h2 id="cardOwnerName" class="text-lg md:text-2xl font-black uppercase italic tracking-tighter truncate max-w-[150px] md:max-w-none">Your Card</h2>
+                <span class="text-[9px] md:text-[10px] opacity-80 uppercase font-bold text-slate-300">Brewed Potion Studios</span>
               </div>
               <div class="flex gap-1 md:gap-2">
-                <button onclick="downloadCard()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition">SAVE</button>
-                <button id="btnNewCard" onclick="generateCard()" class="bg-white text-brand-primary px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition">NEW</button>
+                <button onclick="downloadCard()" class="bg-teal-700 hover:bg-teal-600 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-md active:scale-95 transition">SAVE</button>
+                <button id="btnNewCard" onclick="generateCard()" class="bg-slate-100 text-brand-primary px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-md active:scale-95 transition">NEW</button>
               </div>
             </div>
             <div class="flex justify-center overflow-x-auto pb-2">
               <table id="bingoCard" class="border-separate border-spacing-1 md:border-spacing-2">
-                <thead class="text-white font-black text-xl md:text-3xl drop-shadow-md">
+                <thead class="text-slate-100 font-black text-xl md:text-3xl drop-shadow-sm">
                   <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
                 </thead>
-                <tbody class="bg-slate-900/40 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden p-1"></tbody>
+                <tbody class="bg-slate-700/50 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden p-1"></tbody>
               </table>
             </div>
           </div> 
@@ -162,40 +173,40 @@
 
       <div class="lg:col-span-1 space-y-4 md:space-y-6">
         
-        <div id="hostControlsPanel" class="hidden sticky top-4 z-20 bg-brand-primary p-3 md:p-4 rounded-3xl shadow-xl text-white space-y-2 border border-violet-400/30">
-          <button id="btnStartGame" onclick="triggerStartGame()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-xl shadow-lg transition active:scale-95 text-sm md:text-base border border-slate-700">START GAME</button>
+        <div id="hostControlsPanel" class="hidden sticky top-4 z-20 bg-brand-primary p-3 md:p-4 rounded-3xl shadow-xl text-white space-y-2 border border-violet-500/30">
+          <button id="btnStartGame" onclick="triggerStartGame()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold py-2 rounded-xl shadow-lg transition active:scale-95 text-sm md:text-base border border-slate-600">START GAME</button>
           <div id="activeHostButtons" class="hidden space-y-2">
-            <button onclick="callNumber()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 rounded-xl shadow-inner active:scale-95 transition text-base md:text-lg">CALL NUMBER</button>
+            <button onclick="callNumber()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 rounded-xl shadow-inner active:scale-95 transition text-base md:text-lg">CALL NUMBER</button>
             <div class="grid grid-cols-2 gap-2">
-               <button onclick="toggleJackpotMode()" id="jackpotBtn" class="w-full border border-white/30 hover:bg-white/10 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition uppercase">BLACKOUT</button>
+               <button onclick="toggleJackpotMode()" id="jackpotBtn" class="w-full border border-white/20 hover:bg-white/10 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition uppercase">BLACKOUT</button>
                <button onclick="resetBingo()" class="w-full text-white/50 text-[9px] md:text-[10px] font-bold py-1.5 uppercase hover:text-white transition">RESET</button>
             </div>
           </div>
         </div>
 
-        <div class="glass-panel p-4 md:p-6 rounded-3xl shadow-md border-b-4 border-slate-700">
+        <div class="glass-panel p-4 md:p-6 rounded-3xl shadow-md border-b-4 border-slate-600">
           <div class="mb-2 text-center">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Room</span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Room</span>
             <div id="gameRoomCode" class="text-xl md:text-2xl font-black text-brand-primary tracking-widest">XXXXX</div>
           </div>
           <div class="flex flex-col items-center gap-2 mt-2 mb-2">
-            <button onclick="copyInviteLink()" class="bg-slate-700 hover:bg-slate-600 text-brand-primary text-[10px] font-bold py-2 px-4 rounded-full transition flex items-center gap-2 w-full justify-center border border-slate-600">
+            <button onclick="copyInviteLink()" class="bg-slate-800 hover:bg-slate-700 text-brand-primary text-[10px] font-bold py-2 px-4 rounded-full transition flex items-center gap-2 w-full justify-center border border-slate-600">
               <span id="shareBtnText">COPY INVITE LINK</span>
             </button>
-            <button id="btnGameLeave" onclick="leaveRoom()" class="hidden w-full mt-2 text-slate-600 hover:text-red-400 text-[10px] font-bold uppercase tracking-widest transition border-t border-slate-700 pt-2">
+            <button id="btnGameLeave" onclick="leaveRoom()" class="hidden w-full mt-2 text-slate-500 hover:text-red-400 text-[10px] font-bold uppercase tracking-widest transition border-t border-slate-600 pt-2">
               End Game
             </button>
           </div>
-          <h3 class="font-bold text-slate-500 text-xs uppercase mb-2 tracking-widest border-t border-slate-700 pt-2">Players</h3>
+          <h3 class="font-bold text-slate-500 text-xs uppercase mb-2 tracking-widest border-t border-slate-600 pt-2">Players</h3>
           <ul id="gamePlayerList" class="space-y-1 max-h-48 overflow-y-auto pr-2"></ul>
-          <div id="jackpotStatus" class="mt-4 text-center p-2 bg-brand-secondary text-white rounded-lg text-xs font-bold hidden animate-bounce shadow-lg shadow-pink-900/50">BLACKOUT MODE</div>
+          <div id="jackpotStatus" class="mt-4 text-center p-2 bg-brand-secondary text-white rounded-lg text-xs font-bold hidden animate-bounce shadow-md">BLACKOUT MODE</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="winnerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-    <div class="bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-t-8 border-yellow-400 animate-pop-up relative overflow-hidden">
+  <div id="winnerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-sm px-4">
+    <div class="bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-t-8 border-yellow-500 animate-pop-up relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-full bg-yellow-500 opacity-5 pointer-events-none"></div>
         <div class="relative z-10">
             <div class="text-6xl mb-4">🏆</div>
@@ -204,20 +215,20 @@
             <div id="winnerNameDisplay" class="text-2xl font-bold text-white mb-8 animate-bounce">
                 PLAYER NAME
             </div>
-            <button id="modalActionBtn" onclick="closeWinnerModal()" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition uppercase text-sm">
+            <button id="modalActionBtn" onclick="closeWinnerModal()" class="bg-brand-primary hover:bg-violet-600 text-slate-100 font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition uppercase text-sm">
                 Keep Playing
             </button>
         </div>
     </div>
   </div>
 
-  <footer class="mt-8 mb-8 flex flex-col items-center gap-4 opacity-40 hover:opacity-80 transition">
-    <div class="h-px w-24 bg-slate-600"></div>
+  <footer class="mt-8 mb-8 flex flex-col items-center gap-4 opacity-30 hover:opacity-80 transition duration-500">
+    <div class="h-px w-24 bg-slate-700"></div>
     <div class="flex items-center gap-2">
       <img src="https://scrmbldgreg.github.io/bingo-manila/assets/gemini-ai-logo.png" alt="Gemini Logo" class="w-4 h-4 md:w-6 md:h-6 invert">
-      <p class="text-[8px] md:text-[10px] font-bold tracking-[0.2em] text-slate-300 uppercase">Powered by Gemini AI</p>
+      <p class="text-[8px] md:text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase">Powered by Gemini AI</p>
     </div>
-    <p class="text-[8px] font-medium text-slate-500 tracking-wider uppercase">&copy; 2026 Brewed Potion Studios</p>
+    <p class="text-[8px] font-medium text-slate-600 tracking-wider uppercase">&copy; 2026 Brewed Potion Studios</p>
   </footer>
 
 <script>
@@ -361,7 +372,7 @@ function setupLobby() {
     const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${currentLobby}`;
     new QRCode(qrContainer, {
         text: inviteUrl, width: 100, height: 100,
-        colorDark : "#0f172a", colorLight : "#ffffff", 
+        colorDark : "#1e293b", colorLight : "#ffffff", 
         correctLevel : QRCode.CorrectLevel.L
     });
   }
@@ -389,7 +400,7 @@ function setupLobby() {
             `<button onclick="kickPlayer('${p}')" class="ml-2 text-brand-secondary font-bold text-[8px] uppercase border border-pink-900/50 bg-pink-900/20 px-2 py-1 rounded-md hover:bg-pink-900/50">Kick</button>` : '';
           const leaveBtn = (isMe && !isHost) ? 
             `<button onclick="leaveRoom()" class="ml-2 text-slate-500 font-bold text-[8px] uppercase border border-slate-700 px-2 py-1 rounded-md hover:bg-slate-700 hover:text-slate-300">Leave</button>` : '';
-          return `<li class="p-2 bg-slate-800 rounded-lg border border-slate-700 flex justify-between items-center text-xs shadow-sm animate-fade-in"><span class="font-bold text-slate-200">${p}</span><div class="flex items-center gap-1">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-2 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${kickBtn} ${leaveBtn}</div></li>`;
+          return `<li class="p-2 bg-slate-800 rounded-lg border border-slate-700 flex justify-between items-center text-xs shadow-sm animate-fade-in"><span class="font-bold text-slate-300">${p}</span><div class="flex items-center gap-1">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-2 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${kickBtn} ${leaveBtn}</div></li>`;
         }).join('');
     }
     
@@ -551,7 +562,7 @@ function render(state) {
     btn.textContent = "LOCKED";
   } else {
     btn.disabled = false;
-    btn.className = "bg-white text-brand-primary px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition";
+    btn.className = "bg-slate-100 text-brand-primary px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-md active:scale-95 transition hover:bg-white";
     btn.textContent = "NEW";
   }
   document.getElementById('jackpotStatus').classList.toggle('hidden', !state.isJackpotMode);
@@ -583,7 +594,7 @@ function updatePlayerUI(players, hostName, winnerList) {
         actionBadge = `<button onclick="leaveRoom()" class="ml-1 bg-slate-700 hover:bg-slate-600 text-slate-400 font-bold text-[8px] rounded-full px-2 py-0.5 border border-slate-600 uppercase transition">Leave</button>`;
     }
 
-    return `<li class="flex items-center justify-between p-2 rounded-lg border ${isWinner ? 'bg-yellow-900/30 border-yellow-500' : 'bg-slate-800 border-slate-700'}"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full ${isWinner ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}"></div><span class="text-xs font-bold ${isWinner ? 'text-yellow-200' : 'text-slate-300'}">${p}</span></div><div class="flex items-center">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-1.5 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${isWinner ? '<span class="text-[7px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase ml-1">WIN</span>' : ''}${actionBadge}</div></li>`;
+    return `<li class="flex items-center justify-between p-2 rounded-lg border ${isWinner ? 'bg-yellow-900/30 border-yellow-500' : 'bg-slate-800 border-slate-700'}"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full ${isWinner ? 'bg-yellow-500 animate-pulse' : 'bg-teal-500'}"></div><span class="text-xs font-bold ${isWinner ? 'text-yellow-200' : 'text-slate-300'}">${p}</span></div><div class="flex items-center">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-1.5 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${isWinner ? '<span class="text-[7px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase ml-1">WIN</span>' : ''}${actionBadge}</div></li>`;
   }).join('');
 }
 
