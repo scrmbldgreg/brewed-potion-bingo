@@ -402,8 +402,21 @@ function setupLobby() {
     if (checkExpiration(data.createdAt)) return;
 
     const players = data.players || [];
-    const lobbyList = document.getElementById('playerList');
     
+    // --- FIX: Restore Lobby List Rendering ---
+    const lobbyList = document.getElementById('playerList');
+    if (lobbyList) {
+        lobbyList.innerHTML = players.map(p => {
+          const isHostUser = (p === data.host);
+          const isMe = (p === myName);
+          const kickBtn = (isHost && !isMe) ? 
+            `<button onclick="kickPlayer('${p}')" class="ml-2 text-pink-600 font-bold text-[8px] uppercase border border-pink-200 px-2 py-1 rounded-md hover:bg-pink-50">Kick</button>` : '';
+          const leaveBtn = (isMe && !isHost) ? 
+            `<button onclick="leaveRoom()" class="ml-2 text-slate-400 font-bold text-[8px] uppercase border border-slate-200 px-2 py-1 rounded-md hover:bg-slate-50">Leave</button>` : '';
+          return `<li class="p-2 bg-white rounded-lg border border-slate-200 flex justify-between items-center text-xs shadow-sm animate-fade-in"><span class="font-bold text-slate-700">${p}</span><div class="flex items-center gap-1">${isHostUser ? '<span class="text-[7px] bg-purple-600 text-white px-2 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${kickBtn} ${leaveBtn}</div></li>`;
+        }).join('');
+    }
+
     if (data.gameState) {
         gameStarted = data.gameState.gameStarted;
         calledNumbers = data.gameState.calledNumbers || [];
@@ -420,11 +433,9 @@ function setupLobby() {
             }
         });
 
-        // Updated for Ranking System
         updatePlayerUI(players, data.host, currentWinners);
         render(data.gameState);
     } else {
-        // Fallback if gameState isn't ready yet
         updatePlayerUI(players, data.host, []);
     }
   });
