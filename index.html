@@ -11,31 +11,49 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    /* --- BRANDING COLORS --- */
+    /* --- DARK BRANDING COLORS --- */
     :root { 
-        --potion-purple: #8b5cf6; /* Violet-500 */
-        --deep-purple: #6d28d9;   /* Violet-700 */
-        --magic-pink: #ec4899;    /* Pink-500 */
+        --potion-glow: #a78bfa;   /* Violet-400 (Text/Glow) */
+        --potion-dim: #7c3aed;    /* Violet-600 (Primary Buttons) */
+        --magic-pink: #db2777;    /* Pink-600 (Secondary) */
+        --dark-bg: #0f172a;       /* Slate-900 (Main BG) */
+        --panel-bg: #1e293b;      /* Slate-800 (Cards) */
     }
     
-    .bg-brand-primary { background-color: var(--deep-purple); }
-    .text-brand-primary { color: var(--deep-purple); }
-    .border-brand-primary { border-color: var(--deep-purple); }
+    body { background-color: var(--dark-bg); color: #f1f5f9; }
+
+    .bg-brand-primary { background-color: var(--potion-dim); }
+    .text-brand-primary { color: var(--potion-glow); }
+    .border-brand-primary { border-color: var(--potion-dim); }
     
     .bg-brand-secondary { background-color: var(--magic-pink); }
-    .text-brand-secondary { color: var(--magic-pink); }
+    .text-brand-secondary { color: #f472b6; } 
     .border-brand-secondary { border-color: var(--magic-pink); }
+    
+    /* Panel Styles */
+    .glass-panel {
+        background-color: var(--panel-bg);
+        border: 1px solid #334155;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    }
 
     button { touch-action: manipulation; }
     
-    .marked { position: relative; background-color: #10b981 !important; color: white !important; }
-    .marked::after { content: '✖'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.4); font-size: 1.2rem; }
+    /* Bingo Cell Styles - Kept light for readability, but softer */
+    .bingo-cell {
+        background-color: #f8fafc;
+        color: #1e293b;
+    }
+    
+    .marked { position: relative; background-color: #059669 !important; color: white !important; border-color: #047857 !important; }
+    .marked::after { content: '✖'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.6); font-size: 1.2rem; }
+    
     .winning-cell { position: relative; background-color: #fef08a !important; color: #854d0e !important; }
     .winning-cell::after { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 4px; background-color: var(--magic-pink); transform: translateY(-50%); z-index: 10; pointer-events: none; }
     
     .no-scrollbar::-webkit-scrollbar { width: 0px; }
     #gamePlayerList::-webkit-scrollbar { width: 4px; }
-    #gamePlayerList::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    #gamePlayerList::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
     
     @keyframes slot-spin { 0% { transform: translateY(-20px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
     .slot-rolling { animation: slot-spin 0.1s linear infinite; color: var(--magic-pink) !important; }
@@ -45,57 +63,57 @@
     .animate-pop-up { animation: pop-up 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
   </style>
 </head>
-<body class="bg-purple-50 min-h-screen flex flex-col items-center p-2 md:p-4 font-sans text-slate-900 overflow-x-hidden">
+<body class="min-h-screen flex flex-col items-center p-2 md:p-4 font-sans overflow-x-hidden">
 
   <div class="flex flex-col items-center mb-4 md:mb-8 mt-2">
-    <div class="w-20 h-20 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-2 bg-white">
-      <img src="assets/bps-logo.jpg" onerror="this.src='https://placehold.co/150x150/6d28d9/ffffff?text=BP'" alt="Brewed Potion Logo" class="w-full h-full object-contain p-2">
+    <div class="w-20 h-20 md:w-32 md:h-32 rounded-full border-4 border-slate-700 shadow-xl flex items-center justify-center overflow-hidden mb-2 bg-white">
+      <img src="https://scrmbldgreg.github.io/brewed-potion-bingo/assets/bps-logo.jpg" onerror="this.src='https://placehold.co/150x150/6d28d9/ffffff?text=BP'" alt="Brewed Potion Logo" class="w-full h-full object-contain p-2">
     </div>
-    <h1 class="text-xl md:text-2xl font-black tracking-tighter text-brand-primary uppercase">Brewed Potion Studios</h1>
+    <h1 class="text-xl md:text-2xl font-black tracking-tighter text-brand-primary uppercase drop-shadow-md">Brewed Potion Studios</h1>
   </div>
 
-  <div id="screenInitial" class="bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-md flex flex-col gap-4 text-center border-t-8 border-brand-primary">
-    <button onclick="showScreen('screenCreate')" class="bg-brand-primary hover:opacity-90 text-white font-bold py-4 rounded-2xl transition shadow-md active:scale-95">CREATE ROOM</button>
-    <button onclick="showScreen('screenJoin')" class="bg-brand-secondary hover:opacity-90 text-white font-bold py-4 rounded-2xl transition shadow-md shadow-pink-200 active:scale-95">JOIN ROOM</button>
+  <div id="screenInitial" class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md flex flex-col gap-4 text-center border-t-4 border-brand-primary">
+    <button onclick="showScreen('screenCreate')" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-violet-900/50 active:scale-95">CREATE ROOM</button>
+    <button onclick="showScreen('screenJoin')" class="bg-brand-secondary hover:bg-pink-500 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-pink-900/50 active:scale-95">JOIN ROOM</button>
   </div>
 
-  <div id="screenCreate" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-md border-t-8 border-brand-primary">
+  <div id="screenCreate" class="hidden glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md border-t-4 border-brand-primary">
     <h2 class="text-xl font-bold mb-4 text-brand-primary">Host a Game</h2>
-    <input id="hostName" type="text" placeholder="Your Name" class="border-2 rounded-xl p-3 w-full mb-4 outline-none focus:border-brand-primary appearance-none">
-    <button onclick="handleCreateLobby()" class="bg-brand-primary text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition">Generate Room Code</button>
-    <button onclick="showScreen('screenInitial')" class="text-slate-400 mt-4 w-full text-sm hover:underline text-center py-2">← Cancel</button>
+    <input id="hostName" type="text" placeholder="Your Name" class="bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-xl p-3 w-full mb-4 outline-none focus:border-brand-primary appearance-none transition">
+    <button onclick="handleCreateLobby()" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition shadow-lg">Generate Room Code</button>
+    <button onclick="showScreen('screenInitial')" class="text-slate-500 mt-4 w-full text-sm hover:text-slate-300 hover:underline text-center py-2">← Cancel</button>
   </div>
 
-  <div id="screenJoin" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-md border-t-8 border-brand-secondary">
+  <div id="screenJoin" class="hidden glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md border-t-4 border-brand-secondary">
     <h2 class="text-xl font-bold mb-4 text-brand-secondary">Join Room</h2>
-    <input id="playerName" type="text" placeholder="Your Name" class="border-2 rounded-xl p-3 w-full mb-3 outline-none focus:border-brand-secondary appearance-none">
-    <input id="joinCode" type="text" placeholder="Room Code" class="border-2 rounded-xl p-3 w-full mb-4 outline-none uppercase tracking-widest text-center font-bold appearance-none">
-    <button onclick="handleJoinLobby()" class="bg-brand-secondary text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition">Enter Room</button>
-    <button onclick="showScreen('screenInitial')" class="text-slate-400 mt-4 w-full text-sm hover:underline text-center py-2">← Cancel</button>
+    <input id="playerName" type="text" placeholder="Your Name" class="bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-xl p-3 w-full mb-3 outline-none focus:border-brand-secondary appearance-none transition">
+    <input id="joinCode" type="text" placeholder="Room Code" class="bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-xl p-3 w-full mb-4 outline-none uppercase tracking-widest text-center font-bold appearance-none transition">
+    <button onclick="handleJoinLobby()" class="bg-brand-secondary hover:bg-pink-500 text-white font-bold py-3 rounded-xl w-full uppercase active:scale-95 transition shadow-lg">Enter Room</button>
+    <button onclick="showScreen('screenInitial')" class="text-slate-500 mt-4 w-full text-sm hover:text-slate-300 hover:underline text-center py-2">← Cancel</button>
   </div>
 
-  <div id="screenLobbyRoom" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-xl w-full max-w-lg border-x-8 border-brand-primary">
+  <div id="screenLobbyRoom" class="hidden glass-panel p-6 md:p-8 rounded-3xl w-full max-w-lg border-x-4 border-brand-primary">
     <div class="text-center mb-6">
-      <span class="text-slate-400 uppercase text-xs font-bold tracking-widest">Room Code</span>
-      <div id="displayCode" class="text-5xl md:text-6xl font-black text-brand-primary mt-1">XXXXX</div>
+      <span class="text-slate-500 uppercase text-xs font-bold tracking-widest">Room Code</span>
+      <div id="displayCode" class="text-5xl md:text-6xl font-black text-brand-primary mt-1 drop-shadow-sm">XXXXX</div>
     </div>
     <div class="flex justify-center mb-6">
-        <div id="qrcode" class="p-2 bg-white border-2 border-slate-100 rounded-xl shadow-sm"></div>
+        <div id="qrcode" class="p-2 bg-white border-2 border-slate-200 rounded-xl shadow-inner"></div>
     </div>
     <div class="flex flex-col items-center gap-2 mt-4 mb-4">
-      <button onclick="copyInviteLink()" class="bg-purple-50 hover:bg-purple-100 text-brand-primary text-[10px] font-bold py-3 px-6 rounded-full transition flex items-center gap-2 active:bg-purple-200">
+      <button onclick="copyInviteLink()" class="bg-slate-700 hover:bg-slate-600 text-brand-primary text-[10px] font-bold py-3 px-6 rounded-full transition flex items-center gap-2 active:bg-slate-500 border border-slate-600">
         <span id="shareBtnText">COPY INVITE LINK</span>
       </button>
     </div>
-    <div class="bg-slate-50 rounded-2xl p-4 mb-6">
-      <h3 class="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm">
+    <div class="bg-slate-900/50 rounded-2xl p-4 mb-6 border border-slate-700/50">
+      <h3 class="font-bold text-slate-400 mb-3 flex items-center gap-2 text-sm">
         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
         Waiting for Players...
       </h3>
       <ul id="playerList" class="space-y-2 max-h-40 overflow-y-auto"></ul>
     </div>
-    <button onclick="enterGamePanel()" class="bg-brand-primary text-white font-bold py-4 rounded-2xl w-full shadow-xl active:scale-95 transition">ENTER GAME PANEL</button>
-    <button onclick="leaveRoom()" id="btnCancelLobby" class="hidden mt-4 text-slate-400 hover:text-brand-secondary text-[10px] font-bold uppercase tracking-widest w-full text-center transition py-2">
+    <button onclick="enterGamePanel()" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-4 rounded-2xl w-full shadow-xl active:scale-95 transition">ENTER GAME PANEL</button>
+    <button onclick="leaveRoom()" id="btnCancelLobby" class="hidden mt-4 text-slate-600 hover:text-red-400 text-[10px] font-bold uppercase tracking-widest w-full text-center transition py-2">
       Close Room
     </button>
   </div>
@@ -107,13 +125,13 @@
       <div class="lg:col-span-3 space-y-4 md:space-y-6">
         <div class="grid md:grid-cols-3 gap-4 md:gap-6">
           
-          <div class="bg-white p-4 md:p-6 rounded-3xl shadow-lg flex flex-col border-t-8 border-brand-primary order-2 md:order-1 h-full">
+          <div class="glass-panel p-4 md:p-6 rounded-3xl shadow-lg flex flex-col border-t-4 border-brand-primary order-2 md:order-1 h-full">
             <div class="text-center mb-2 md:mb-4">
-              <h3 class="font-bold text-slate-400 text-[10px] mb-1 uppercase tracking-widest">Now Calling</h3>
-              <div id="bingoCurrent" class="text-5xl md:text-6xl font-black text-brand-primary leading-tight">-</div>
+              <h3 class="font-bold text-slate-500 text-[10px] mb-1 uppercase tracking-widest">Now Calling</h3>
+              <div id="bingoCurrent" class="text-5xl md:text-6xl font-black text-brand-primary leading-tight drop-shadow-md">-</div>
             </div>
-            <div class="flex-1 flex flex-col border-t border-slate-100 pt-2 md:pt-4">
-              <h3 class="font-bold text-slate-400 text-[10px] mb-2 uppercase tracking-widest text-center">History</h3>
+            <div class="flex-1 flex flex-col border-t border-slate-700 pt-2 md:pt-4">
+              <h3 class="font-bold text-slate-500 text-[10px] mb-2 uppercase tracking-widest text-center">History</h3>
               <div id="historyBox" class="w-full min-h-[3.5rem] transition-all duration-300">
                   </div>
             </div>
@@ -122,20 +140,20 @@
           <div id="cardWrapper" class="md:col-span-2 p-3 md:p-6 rounded-3xl shadow-2xl transition-all border-brand-primary border-4 md:border-8 overflow-hidden order-1 md:order-2">
             <div class="flex justify-between items-center mb-2 md:mb-6 text-white">
               <div class="flex flex-col">
-                <h2 id="cardOwnerName" class="text-lg md:text-2xl font-black uppercase italic tracking-tighter truncate max-w-[150px] md:max-w-none">Your Card</h2>
-                <span class="text-[9px] md:text-[10px] opacity-75 uppercase font-bold">Brewed Potion Studios</span>
+                <h2 id="cardOwnerName" class="text-lg md:text-2xl font-black uppercase italic tracking-tighter truncate max-w-[150px] md:max-w-none text-shadow-sm">Your Card</h2>
+                <span class="text-[9px] md:text-[10px] opacity-80 uppercase font-bold text-slate-200">Brewed Potion Studios</span>
               </div>
               <div class="flex gap-1 md:gap-2">
-                <button onclick="downloadCard()" class="bg-green-600 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition">SAVE</button>
+                <button onclick="downloadCard()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition">SAVE</button>
                 <button id="btnNewCard" onclick="generateCard()" class="bg-white text-brand-primary px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs shadow-xl active:scale-95 transition">NEW</button>
               </div>
             </div>
             <div class="flex justify-center overflow-x-auto pb-2">
               <table id="bingoCard" class="border-separate border-spacing-1 md:border-spacing-2">
-                <thead class="text-white font-black text-xl md:text-3xl">
+                <thead class="text-white font-black text-xl md:text-3xl drop-shadow-md">
                   <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
                 </thead>
-                <tbody class="bg-white rounded-xl md:rounded-2xl overflow-hidden"></tbody>
+                <tbody class="bg-slate-900/40 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden p-1"></tbody>
               </table>
             </div>
           </div> 
@@ -144,10 +162,10 @@
 
       <div class="lg:col-span-1 space-y-4 md:space-y-6">
         
-        <div id="hostControlsPanel" class="hidden sticky top-4 z-20 bg-brand-primary p-3 md:p-4 rounded-3xl shadow-xl text-white space-y-2">
-          <button id="btnStartGame" onclick="triggerStartGame()" class="w-full bg-brand-secondary text-white font-bold py-2 rounded-xl shadow-lg transition active:scale-95 text-sm md:text-base">START GAME</button>
+        <div id="hostControlsPanel" class="hidden sticky top-4 z-20 bg-brand-primary p-3 md:p-4 rounded-3xl shadow-xl text-white space-y-2 border border-violet-400/30">
+          <button id="btnStartGame" onclick="triggerStartGame()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-xl shadow-lg transition active:scale-95 text-sm md:text-base border border-slate-700">START GAME</button>
           <div id="activeHostButtons" class="hidden space-y-2">
-            <button onclick="callNumber()" class="w-full bg-green-500 text-white font-bold py-2 rounded-xl shadow-inner active:scale-95 transition text-base md:text-lg">CALL NUMBER</button>
+            <button onclick="callNumber()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 rounded-xl shadow-inner active:scale-95 transition text-base md:text-lg">CALL NUMBER</button>
             <div class="grid grid-cols-2 gap-2">
                <button onclick="toggleJackpotMode()" id="jackpotBtn" class="w-full border border-white/30 hover:bg-white/10 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition uppercase">BLACKOUT</button>
                <button onclick="resetBingo()" class="w-full text-white/50 text-[9px] md:text-[10px] font-bold py-1.5 uppercase hover:text-white transition">RESET</button>
@@ -155,51 +173,51 @@
           </div>
         </div>
 
-        <div class="bg-white p-4 md:p-6 rounded-3xl shadow-md border-b-4 border-slate-200">
+        <div class="glass-panel p-4 md:p-6 rounded-3xl shadow-md border-b-4 border-slate-700">
           <div class="mb-2 text-center">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Room</span>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Room</span>
             <div id="gameRoomCode" class="text-xl md:text-2xl font-black text-brand-primary tracking-widest">XXXXX</div>
           </div>
           <div class="flex flex-col items-center gap-2 mt-2 mb-2">
-            <button onclick="copyInviteLink()" class="bg-slate-100 hover:bg-slate-200 text-brand-primary text-[10px] font-bold py-2 px-4 rounded-full transition flex items-center gap-2 w-full justify-center">
+            <button onclick="copyInviteLink()" class="bg-slate-700 hover:bg-slate-600 text-brand-primary text-[10px] font-bold py-2 px-4 rounded-full transition flex items-center gap-2 w-full justify-center border border-slate-600">
               <span id="shareBtnText">COPY INVITE LINK</span>
             </button>
-            <button id="btnGameLeave" onclick="leaveRoom()" class="hidden w-full mt-2 text-slate-400 hover:text-brand-secondary text-[10px] font-bold uppercase tracking-widest transition border-t pt-2">
+            <button id="btnGameLeave" onclick="leaveRoom()" class="hidden w-full mt-2 text-slate-600 hover:text-red-400 text-[10px] font-bold uppercase tracking-widest transition border-t border-slate-700 pt-2">
               End Game
             </button>
           </div>
-          <h3 class="font-bold text-slate-400 text-xs uppercase mb-2 tracking-widest border-t pt-2">Players</h3>
+          <h3 class="font-bold text-slate-500 text-xs uppercase mb-2 tracking-widest border-t border-slate-700 pt-2">Players</h3>
           <ul id="gamePlayerList" class="space-y-1 max-h-48 overflow-y-auto pr-2"></ul>
-          <div id="jackpotStatus" class="mt-4 text-center p-2 bg-brand-secondary text-white rounded-lg text-xs font-bold hidden animate-bounce">BLACKOUT MODE</div>
+          <div id="jackpotStatus" class="mt-4 text-center p-2 bg-brand-secondary text-white rounded-lg text-xs font-bold hidden animate-bounce shadow-lg shadow-pink-900/50">BLACKOUT MODE</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="winnerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-    <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-t-8 border-yellow-400 animate-pop-up relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-full bg-yellow-50 opacity-50 pointer-events-none"></div>
+  <div id="winnerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+    <div class="bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-t-8 border-yellow-400 animate-pop-up relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full bg-yellow-500 opacity-5 pointer-events-none"></div>
         <div class="relative z-10">
             <div class="text-6xl mb-4">🏆</div>
             <h2 class="text-3xl font-black text-brand-primary uppercase italic tracking-tighter mb-2">BINGO!</h2>
             <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Congratulations</p>
-            <div id="winnerNameDisplay" class="text-2xl font-bold text-brand-secondary mb-8 animate-bounce">
+            <div id="winnerNameDisplay" class="text-2xl font-bold text-white mb-8 animate-bounce">
                 PLAYER NAME
             </div>
-            <button id="modalActionBtn" onclick="closeWinnerModal()" class="bg-brand-primary text-white font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition uppercase text-sm">
+            <button id="modalActionBtn" onclick="closeWinnerModal()" class="bg-brand-primary hover:bg-violet-500 text-white font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition uppercase text-sm">
                 Keep Playing
             </button>
         </div>
     </div>
   </div>
 
-  <footer class="mt-8 mb-8 flex flex-col items-center gap-4 opacity-60">
-    <div class="h-px w-24 bg-slate-300"></div>
+  <footer class="mt-8 mb-8 flex flex-col items-center gap-4 opacity-40 hover:opacity-80 transition">
+    <div class="h-px w-24 bg-slate-600"></div>
     <div class="flex items-center gap-2">
-      <img src="https://scrmbldgreg.github.io/bingo-manila/assets/gemini-ai-logo.png" alt="Gemini Logo" class="w-4 h-4 md:w-6 md:h-6 animate-pulse">
-      <p class="text-[8px] md:text-[10px] font-bold tracking-[0.2em] text-brand-primary uppercase">Powered by Gemini AI</p>
+      <img src="https://scrmbldgreg.github.io/bingo-manila/assets/gemini-ai-logo.png" alt="Gemini Logo" class="w-4 h-4 md:w-6 md:h-6 invert">
+      <p class="text-[8px] md:text-[10px] font-bold tracking-[0.2em] text-slate-300 uppercase">Powered by Gemini AI</p>
     </div>
-    <p class="text-[8px] font-medium text-slate-400 tracking-wider uppercase">&copy; 2026 Brewed Potion Studios</p>
+    <p class="text-[8px] font-medium text-slate-500 tracking-wider uppercase">&copy; 2026 Brewed Potion Studios</p>
   </footer>
 
 <script>
@@ -218,8 +236,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const LOBBY_LIFETIME = 3 * 60 * 60 * 1000; // Server lobby life
-const INACTIVITY_LIMIT = 2 * 60 * 60 * 1000; // 2 Hours (Client side)
+const LOBBY_LIFETIME = 3 * 60 * 60 * 1000; 
+const INACTIVITY_LIMIT = 2 * 60 * 60 * 1000; 
 let currentLobby = null, myName = null, isHost = false;
 let gameNumbersPool = [], calledNumbers = [], isJackpotMode = false, gameStarted = false;
 let isRolling = false;
@@ -241,24 +259,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (savedSession) {
     const session = JSON.parse(savedSession);
-    
-    // --- CHECK FOR INACTIVITY ---
     const lastActive = session.lastActive || 0;
     if (Date.now() - lastActive > INACTIVITY_LIMIT) {
         console.log("Session expired due to inactivity.");
         localStorage.removeItem('bingo_session');
     } else {
-        // Session is fresh, try to connect
         const snapshot = await db.ref('lobbies/' + session.lobby).get();
-        
         if (snapshot.exists()) {
           const data = snapshot.val();
           if (checkExpiration(data.createdAt)) return;
-          
           currentLobby = session.lobby;
           myName = session.name;
           isHost = (data.host === myName);
-          
           if (isHost) {
             db.ref(`lobbies/${currentLobby}/hostActive`).set(true);
             db.ref(`lobbies/${currentLobby}/hostActive`).onDisconnect().set(false);
@@ -329,7 +341,6 @@ async function handleJoinLobby() {
 }
 
 function setupLobby() {
-  // --- SAVE WITH TIMESTAMP ---
   const updateSession = () => {
       localStorage.setItem('bingo_session', JSON.stringify({ 
           lobby: currentLobby, 
@@ -338,7 +349,6 @@ function setupLobby() {
           lastActive: Date.now() 
       }));
   };
-  
   updateSession();
   setInterval(updateSession, 5 * 60 * 1000);
   
@@ -351,7 +361,7 @@ function setupLobby() {
     const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${currentLobby}`;
     new QRCode(qrContainer, {
         text: inviteUrl, width: 100, height: 100,
-        colorDark : "#6d28d9", colorLight : "#ffffff", // Updated to Purple
+        colorDark : "#0f172a", colorLight : "#ffffff", 
         correctLevel : QRCode.CorrectLevel.L
     });
   }
@@ -376,10 +386,10 @@ function setupLobby() {
           const isHostUser = (p === data.host);
           const isMe = (p === myName);
           const kickBtn = (isHost && !isMe) ? 
-            `<button onclick="kickPlayer('${p}')" class="ml-2 text-brand-secondary font-bold text-[8px] uppercase border border-pink-200 px-2 py-1 rounded-md hover:bg-pink-50">Kick</button>` : '';
+            `<button onclick="kickPlayer('${p}')" class="ml-2 text-brand-secondary font-bold text-[8px] uppercase border border-pink-900/50 bg-pink-900/20 px-2 py-1 rounded-md hover:bg-pink-900/50">Kick</button>` : '';
           const leaveBtn = (isMe && !isHost) ? 
-            `<button onclick="leaveRoom()" class="ml-2 text-slate-400 font-bold text-[8px] uppercase border border-slate-200 px-2 py-1 rounded-md hover:bg-slate-50">Leave</button>` : '';
-          return `<li class="p-2 bg-white rounded-lg border border-slate-100 flex justify-between items-center text-xs shadow-sm animate-fade-in"><span class="font-bold text-slate-700">${p}</span><div class="flex items-center gap-1">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-2 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${kickBtn} ${leaveBtn}</div></li>`;
+            `<button onclick="leaveRoom()" class="ml-2 text-slate-500 font-bold text-[8px] uppercase border border-slate-700 px-2 py-1 rounded-md hover:bg-slate-700 hover:text-slate-300">Leave</button>` : '';
+          return `<li class="p-2 bg-slate-800 rounded-lg border border-slate-700 flex justify-between items-center text-xs shadow-sm animate-fade-in"><span class="font-bold text-slate-200">${p}</span><div class="flex items-center gap-1">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-2 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${kickBtn} ${leaveBtn}</div></li>`;
         }).join('');
     }
     
@@ -408,7 +418,6 @@ function setupLobby() {
 function enterGamePanel() {
   showScreen('gameArea');
   document.getElementById('gameRoomCode').textContent = currentLobby;
-  
   if (isHost) {
     document.getElementById('hostControlsPanel').classList.remove('hidden');
     document.getElementById('btnGameLeave').classList.remove('hidden'); 
@@ -424,7 +433,6 @@ function enterGamePanel() {
   generateCard();
 }
 
-/* ================= GAMEPLAY ================= */
 function triggerStartGame() {
   if (!confirm("Start game?")) return;
   gameNumbersPool = Array.from({length: 75}, (_, i) => i + 1);
@@ -465,7 +473,6 @@ async function leaveRoom(force = false) {
   location.href = window.location.pathname;
 }
 
-/* ================= WINNER POPUP ================= */
 function triggerWinnerPopup(winnerName) {
     document.getElementById('winnerNameDisplay').textContent = winnerName;
     const btn = document.getElementById('modalActionBtn');
@@ -474,7 +481,6 @@ function triggerWinnerPopup(winnerName) {
     } else {
       btn.textContent = "KEEP PLAYING";
     }
-
     const modal = document.getElementById('winnerModal');
     modal.classList.remove('hidden');
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
@@ -484,7 +490,6 @@ function closeWinnerModal() {
     document.getElementById('winnerModal').classList.add('hidden');
 }
 
-/* ================= UI RENDERING ================= */
 function render(state) {
   const display = document.getElementById('bingoCurrent');
   const newNum = state.lastNum || '-';
@@ -501,11 +506,11 @@ function render(state) {
     let html = '<div class="grid grid-cols-5 gap-0.5 md:gap-1 w-full h-full">';
     ['B','I','N','G','O'].forEach(letter => {
        html += `
-        <div class="flex flex-col gap-1 items-center bg-slate-50 rounded-lg py-1 border border-slate-100 h-full">
-           <div class="font-black text-brand-primary text-[10px] md:text-sm border-b-2 border-slate-200 w-full text-center pb-1">${letter}</div>
+        <div class="flex flex-col gap-1 items-center bg-slate-800 rounded-lg py-1 border border-slate-700 h-full">
+           <div class="font-black text-brand-primary text-[10px] md:text-sm border-b border-slate-700 w-full text-center pb-1">${letter}</div>
            <div class="flex flex-col gap-0.5 w-full items-center h-full px-1">
              ${groups[letter].sort((a,b)=>a-b).map(n => 
-                `<span class="text-[9px] md:text-xs font-bold text-slate-700 bg-white border border-slate-200 w-full text-center rounded shadow-sm">${n}</span>`
+                `<span class="text-[9px] md:text-xs font-bold text-slate-300 bg-slate-700 border border-slate-600 w-full text-center rounded shadow-sm">${n}</span>`
              ).join('')}
            </div>
         </div>`;
@@ -542,7 +547,7 @@ function render(state) {
   const btn = document.getElementById('btnNewCard');
   if (state.gameStarted) {
     btn.disabled = true;
-    btn.className = "bg-slate-200 text-slate-400 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs cursor-not-allowed";
+    btn.className = "bg-slate-800 text-slate-600 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs cursor-not-allowed border border-slate-700";
     btn.textContent = "LOCKED";
   } else {
     btn.disabled = false;
@@ -556,9 +561,9 @@ function render(state) {
 function clearCardMarksUI() {
   document.querySelectorAll('#bingoCard td').forEach(td => {
     td.classList.remove('marked', 'winning-cell');
-    td.classList.add('bg-white');
+    td.classList.add('bingo-cell');
     if (td.textContent === "FREE") {
-      td.classList.remove('bg-white'); td.classList.add('marked');
+      td.classList.remove('bingo-cell'); td.classList.add('marked');
     }
   });
 }
@@ -573,12 +578,12 @@ function updatePlayerUI(players, hostName, winnerList) {
     
     let actionBadge = '';
     if (isHost && !isMe) {
-        actionBadge = `<button onclick="kickPlayer('${p}')" class="ml-1 bg-red-100 hover:bg-red-200 text-red-600 font-bold text-[8px] rounded-full px-2 py-0.5 border border-red-200 uppercase transition">Kick</button>`;
+        actionBadge = `<button onclick="kickPlayer('${p}')" class="ml-1 bg-red-900/40 hover:bg-red-900/60 text-red-300 font-bold text-[8px] rounded-full px-2 py-0.5 border border-red-900 uppercase transition">Kick</button>`;
     } else if (!isHost && isMe) {
-        actionBadge = `<button onclick="leaveRoom()" class="ml-1 bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold text-[8px] rounded-full px-2 py-0.5 border border-slate-200 uppercase transition">Leave</button>`;
+        actionBadge = `<button onclick="leaveRoom()" class="ml-1 bg-slate-700 hover:bg-slate-600 text-slate-400 font-bold text-[8px] rounded-full px-2 py-0.5 border border-slate-600 uppercase transition">Leave</button>`;
     }
 
-    return `<li class="flex items-center justify-between p-2 rounded-lg border ${isWinner ? 'bg-yellow-50 border-yellow-400' : 'bg-slate-50 border-slate-100'}"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full ${isWinner ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}"></div><span class="text-xs font-bold ${isWinner ? 'text-yellow-900' : 'text-slate-700'}">${p}</span></div><div class="flex items-center">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-1.5 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${isWinner ? '<span class="text-[7px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase ml-1">WIN</span>' : ''}${actionBadge}</div></li>`;
+    return `<li class="flex items-center justify-between p-2 rounded-lg border ${isWinner ? 'bg-yellow-900/30 border-yellow-500' : 'bg-slate-800 border-slate-700'}"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full ${isWinner ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}"></div><span class="text-xs font-bold ${isWinner ? 'text-yellow-200' : 'text-slate-300'}">${p}</span></div><div class="flex items-center">${isHostUser ? '<span class="text-[7px] bg-brand-primary text-white px-1.5 py-0.5 rounded-full font-black uppercase">HOST</span>' : ''}${isWinner ? '<span class="text-[7px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase ml-1">WIN</span>' : ''}${actionBadge}</div></li>`;
   }).join('');
 }
 
@@ -595,24 +600,24 @@ function generateCard() {
   const tbody = document.querySelector('#bingoCard tbody');
   tbody.innerHTML = '';
   document.getElementById('cardOwnerName').textContent = myName || "Your Card";
-  // Randomly assign Purple or Pink to the card border
-  document.getElementById('cardWrapper').style.backgroundColor = (Math.random() > 0.5) ? 'var(--deep-purple)' : 'var(--magic-pink)';
+  document.getElementById('cardWrapper').style.backgroundColor = (Math.random() > 0.5) ? 'var(--potion-dim)' : 'var(--magic-pink)';
 
   for (let r=0; r<5; r++) {
     const tr = document.createElement('tr');
     for (let c=0; c<5; c++) {
       const td = document.createElement('td');
-      td.className = "w-11 h-11 sm:w-14 sm:h-14 md:w-20 md:h-20 bg-white border-2 border-slate-200 text-sm sm:text-lg md:text-xl font-black cursor-pointer text-center text-brand-primary shadow-inner touch-manipulation active:bg-slate-100";
+      td.className = "w-11 h-11 sm:w-14 sm:h-14 md:w-20 md:h-20 bingo-cell border-2 border-slate-300 text-sm sm:text-lg md:text-xl font-black cursor-pointer text-center shadow-inner touch-manipulation active:bg-slate-200";
       const val = cols[c][r];
       const label = (val<=15?'B':val<=30?'I':val<=45?'N':val<=60?'G':'O') + "-" + val;
       if (r===2 && c===2) { 
-        td.textContent="FREE"; td.classList.add('bg-brand-secondary', 'marked', 'text-white', 'text-[8px]'); 
+        td.textContent="FREE"; td.classList.remove('bingo-cell'); td.classList.add('marked', 'text-white', 'text-[8px]'); 
       } else { 
         td.textContent = val; td.dataset.label = label; 
         td.onclick = () => { 
             if (r===2 && c===2) return; 
             if (calledNumbers.includes(label)) { 
                 td.classList.toggle('marked'); 
+                td.classList.toggle('bingo-cell');
                 checkWin(); 
             } else { 
                 alert("Number not drawn yet!"); 
@@ -630,13 +635,10 @@ async function announceWin() {
       triggerWinnerPopup(myName);
       displayedWinners.add(myName);
   }
-
   const snapshot = await db.ref(`lobbies/${currentLobby}/gameState/winners`).get();
   let winners = snapshot.val() || [];
-  
   if (typeof winners === 'string') winners = [winners];
   else if (!Array.isArray(winners)) winners = Object.values(winners);
-
   if (!winners.includes(myName)) {
     winners.push(myName);
     await db.ref(`lobbies/${currentLobby}/gameState/winners`).set(winners);
